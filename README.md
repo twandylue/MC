@@ -1,2 +1,2 @@
 # MC
-Build Malloc in C from scratch
+Build up Malloc and GC in C from scratch
