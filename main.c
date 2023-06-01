@@ -8,7 +8,6 @@
 #define CHUNK_LIST_CAPACITY 1024
 
 char heap[HEAP_CAPACITY] = {0};
-size_t heap_size = 0;
 
 typedef struct {
   char *start;
@@ -20,11 +19,11 @@ typedef struct {
   Chunk chunks[CHUNK_LIST_CAPACITY];
 } Chunk_List;
 
-Chunk heap_allocated[CHUNK_LIST_CAPACITY] = {0};
-size_t heap_allocated_size = 0;
-
 Chunk_List allocated_chunks = {0};
-Chunk_List freed_chunks = {0};
+Chunk_List freed_chunks = {.count = 1,
+                           .chunks = {
+                               [0] = {.start = heap, .size = sizeof(heap)},
+                           }};
 
 // NOTE: macro for todo
 #define UNIMPLEMENTED                                                          \
@@ -50,11 +49,6 @@ int chunk_list_find(const Chunk_List *list, void *ptr) {
   if (result != NULL) {
     assert(list->chunks <= result);
 
-    // BUG:
-    // long placeholder = (result - list->chunks);
-    // printf("placeholder: %ld\n", placeholder);
-    // printf("sizeof: %ld\n", sizeof(Chunk));
-    // return placeholder / sizeof(Chunk);
     return (result - list->chunks);
   } else {
     return -1;
@@ -78,7 +72,7 @@ void chunk_list_insert(Chunk_List *list, void *start, size_t size) {
 
 void chunk_list_remove(Chunk_List *list, size_t index) {
   assert(index < list->count);
-  for (size_t i = index; i < list->count - 1; --i) {
+  for (size_t i = index; i < list->count - 1; ++i) {
     list->chunks[i] = list->chunks[i + 1];
   }
 
@@ -86,33 +80,40 @@ void chunk_list_remove(Chunk_List *list, size_t index) {
 }
 
 void chunk_list_dump(const Chunk_List *list) {
-  printf("Allocated Chunks: (%zu)\n", list->count);
+  printf("Chunks: (%zu)\n", list->count);
 
   for (size_t i = 0; i < list->count; ++i) {
-    printf(" start: %p, size: %zu\n", list->chunks[i].start,
+    printf("  start: %p, size: %zu\n", (void *)list->chunks[i].start,
            list->chunks[i].size);
   }
 }
 
 void *heap_alloc(size_t size) {
   if (size > 0) {
+    // NOTE: 'chunks' is an increasing array storing address.
+    for (size_t i = 0; i < freed_chunks.count; ++i) {
+      const Chunk chunk = freed_chunks.chunks[i];
+      if (chunk.size >= size) {
+        chunk_list_remove(&freed_chunks, i);
 
-    assert(heap_size + size <= HEAP_CAPACITY);
-    void *ptr = heap + heap_size;
-    heap_size += size;
+        const size_t tail_size = chunk.size - size;
+        chunk_list_insert(&allocated_chunks, chunk.start, size);
 
-    chunk_list_insert(&allocated_chunks, ptr, size);
+        if (tail_size > 0) {
+          chunk_list_insert(&freed_chunks, chunk.start + size, tail_size);
+        }
 
-    return ptr;
-  } else {
-    return NULL;
+        return chunk.start;
+      }
+    }
   }
+
+  return NULL;
 }
 
 void heap_free(void *ptr) {
   if (ptr != NULL) {
     const int index = chunk_list_find(&allocated_chunks, ptr);
-    printf("index: %d\n", index);
     assert(index >= 0);
 
     chunk_list_insert(&freed_chunks, allocated_chunks.chunks[index].start,
@@ -129,6 +130,11 @@ int main(void) {
     if (i % 2 == 0) {
       heap_free(p);
     }
+  }
+
+  heap_alloc(400);
+  for (int i = 1; i <= 4; ++i) {
+    heap_alloc(i * 2);
   }
 
   chunk_list_dump(&allocated_chunks);
