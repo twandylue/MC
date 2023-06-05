@@ -26,13 +26,13 @@ Chunk_List freed_chunks = {.count = 1,
                            }};
 
 // NOTE: macro for todo
-#define UNIMPLEMENTED                                                          \
-  do {                                                                         \
-    fprintf(stderr, "UNIMPLEMENTED:\n");                                       \
-    fprintf(stderr, "In func: %s\n", __func__);                                \
-    fprintf(stderr, "In file: %s\n", __FILE__);                                \
-    fprintf(stderr, "In line: %d\n", __LINE__);                                \
-    abort();                                                                   \
+#define UNIMPLEMENTED                           \
+  do {                                          \
+    fprintf(stderr, "UNIMPLEMENTED:\n");        \
+    fprintf(stderr, "In func: %s\n", __func__); \
+    fprintf(stderr, "In file: %s\n", __FILE__); \
+    fprintf(stderr, "In line: %d\n", __LINE__); \
+    abort();                                    \
   } while (0)
 
 int chunk_start_compare(const void *a, const void *b) {
@@ -41,6 +41,9 @@ int chunk_start_compare(const void *a, const void *b) {
 
   return a_chunk->start - b_chunk->start;
 }
+
+// TODO:
+void chunk_list_merge(Chunk_List *list, Chunk_List *tmp) { UNIMPLEMENTED; }
 
 int chunk_list_find(const Chunk_List *list, void *ptr) {
   Chunk key = {.start = ptr};
